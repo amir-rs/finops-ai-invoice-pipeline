@@ -1,0 +1,7 @@
+{
+  "source": "telegram",
+  "chat_id": 987654321,
+  "user_name": "FinanceManager",
+  "message_text": "/report",
+  "has_photo": false
+}

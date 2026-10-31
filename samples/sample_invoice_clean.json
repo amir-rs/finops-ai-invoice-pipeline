@@ -1,0 +1,32 @@
+{
+  "source": "email_attachment",
+  "filename": "AWS_Invoice_INV-98214.pdf",
+  "file_type": "application/pdf",
+  "document_base64": "JVBERi0xLjQKJcTl8uXrp/Og0MTGCjEgMCBvYmoKPDwKL1R5cGUgL0NhdGFsb2cKL1BhZ2VzIDIgMCBS...",
+  "mock_ai_extraction": {
+    "vendor_name": "Amazon Web Services Inc.",
+    "vendor_vat_id": "US-91328472",
+    "invoice_number": "INV-2026-98214",
+    "invoice_date": "2026-10-25",
+    "due_date": "2026-11-25",
+    "currency": "USD",
+    "line_items": [
+      {
+        "description": "Amazon EC2 Compute Instances (us-east-1)",
+        "quantity": 2,
+        "unit_price": 150.00,
+        "total_price": 300.00
+      },
+      {
+        "description": "Amazon RDS PostgreSQL Multi-AZ",
+        "quantity": 1,
+        "unit_price": 100.00,
+        "total_price": 100.00
+      }
+    ],
+    "subtotal": 400.00,
+    "tax_amount": 40.00,
+    "total_amount": 440.00,
+    "confidence_score": 0.98
+  }
+}

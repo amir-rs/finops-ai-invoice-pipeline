@@ -1,0 +1,36 @@
+{
+  "source": "telegram",
+  "chat_id": 987654321,
+  "user_name": "FinanceManager",
+  "message_text": "Please process this invoice photo received from Google Cloud Platform",
+  "has_photo": true,
+  "photo_file_id": "AgACAgIAAxkBAAE12345samplePhotoFileId",
+  "filename": "google_cloud_invoice.jpg",
+  "file_type": "image/jpeg",
+  "mock_ai_extraction": {
+    "vendor_name": "Google Cloud Platform",
+    "vendor_vat_id": "US-64738291",
+    "invoice_number": "INV-TG-GCP-8812",
+    "invoice_date": "2026-10-31",
+    "due_date": "2026-11-30",
+    "currency": "USD",
+    "line_items": [
+      {
+        "description": "Compute Engine n2-standard-4",
+        "quantity": 2,
+        "unit_price": 120.00,
+        "total_price": 240.00
+      },
+      {
+        "description": "Cloud Storage Multi-Regional",
+        "quantity": 1,
+        "unit_price": 60.00,
+        "total_price": 60.00
+      }
+    ],
+    "subtotal": 300.00,
+    "tax_amount": 0.00,
+    "total_amount": 300.00,
+    "confidence_score": 0.98
+  }
+}

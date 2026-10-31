@@ -1,0 +1,35 @@
+# Environment variables & secrets (CRITICAL: Never commit .env)
+.env
+.env.local
+.env.*.local
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Logs & temp files
+*.log
+scripts/*.log
+scripts/*_res.txt
+scripts/*_check.txt
+scripts/*_err.log
+sample_invoices/send_log.txt
+err_find.txt
+found.txt
+
+# n8n local data
+.n8n/
+n8n_data/
+postgres_data/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+.dist/

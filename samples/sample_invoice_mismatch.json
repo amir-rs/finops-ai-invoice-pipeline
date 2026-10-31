@@ -1,0 +1,32 @@
+{
+  "source": "vendor_portal",
+  "filename": "Dell_Server_Equipment_INV-4011.pdf",
+  "file_type": "application/pdf",
+  "document_base64": "JVBERi0xLjQKJcTl8uXrp/Og0MTGCjEgMCBvYmoKPDwKL1R5cGUgL0NhdGFsb2cKL1BhZ2VzIDIgMCBS...",
+  "mock_ai_extraction": {
+    "vendor_name": "Dell Enterprise Direct",
+    "vendor_vat_id": "US-44019283",
+    "invoice_number": "INV-2026-4011",
+    "invoice_date": "2026-10-28",
+    "due_date": "2026-11-10",
+    "currency": "USD",
+    "line_items": [
+      {
+        "description": "Dell PowerEdge R760 Rack Server",
+        "quantity": 2,
+        "unit_price": 2400.00,
+        "total_price": 4800.00
+      },
+      {
+        "description": "Enterprise Rail Kit & Cable Arm",
+        "quantity": 2,
+        "unit_price": 150.00,
+        "total_price": 200.00
+      }
+    ],
+    "subtotal": 5100.00,
+    "tax_amount": 400.00,
+    "total_amount": 5500.00,
+    "confidence_score": 0.81
+  }
+}

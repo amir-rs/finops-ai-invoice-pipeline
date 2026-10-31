@@ -1,0 +1,102 @@
+{
+  "name": "Global Incident & Error Handler (DLQ)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "err-1",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const err = $input.item.json;\nconst timestamp = new Date().toISOString();\nconst incident = {\n  incident_id: 'INC-' + Date.now(),\n  failed_at: timestamp,\n  workflow_id: err.workflow ? err.workflow.id : 'unknown',\n  workflow_name: err.workflow ? err.workflow.name : 'Invoice Processing',\n  execution_id: err.execution ? err.execution.id : 'unknown',\n  failed_node: err.execution ? err.execution.lastNodeExecuted : 'unknown',\n  error_message: err.execution && err.execution.error ? err.execution.error.message : 'Unspecified execution error',\n  severity: 'HIGH',\n  requires_devops_alert: true\n};\nreturn { json: incident };"
+      },
+      "id": "err-2",
+      "name": "Enrich Incident Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO audit_logs (workflow_execution_id, invoice_number, event_type, details)\nVALUES (\n  '{{ $json.execution_id }}',\n  'WORKFLOW_CRASH',\n  'PIPELINE_ERROR_DLQ',\n  '{{ JSON.stringify($json) }}'::jsonb\n);",
+        "options": {}
+      },
+      "id": "err-3",
+      "name": "Save Dead Letter to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        680,
+        300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL || 'https://httpbin.org/post' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": \"🚨 *Pipeline Failure Alert*\",\n  \"blocks\": [\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Workflow Failure in {{ $json.workflow_name }}*\\n*Execution ID:* {{ $json.execution_id }}\\n*Failed Node:* `{{ $json.failed_node }}`\\n*Error:* {{ $json.error_message }}\"\n      }\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "err-4",
+      "name": "Send Slack/Ops Incident Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        300
+      ],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Enrich Incident Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich Incident Context": {
+      "main": [
+        [
+          {
+            "node": "Save Dead Letter to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Dead Letter to DB": {
+      "main": [
+        [
+          {
+            "node": "Send Slack/Ops Incident Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

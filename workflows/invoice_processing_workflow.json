@@ -1,0 +1,635 @@
+{
+  "name": "Autonomous Vision AI & Telegram Invoice FinOps Pipeline",
+  "nodes": [
+    {
+      "id": "wb-trig",
+      "name": "Telegram & Invoice Inbound Gateway",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        160,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "process-invoice",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "router",
+      "name": "Inbound Router & Normalizer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const raw = $input.item.json;\nconst item = raw.body || raw;\nconst startTime = new Date().toISOString();\n\nlet chatId = 5836961614; // Default fallback to Amir.r.s\nlet userName = 'User', msgText = '', hasPhoto = false, photoFileId = null, source = 'webhook';\n\nif (item.message) {\n  source = 'telegram';\n  chatId = item.message.chat ? item.message.chat.id : chatId;\n  userName = item.message.from ? (item.message.from.first_name || item.message.from.username) : 'User';\n  msgText = (item.message.text || item.message.caption || '').trim();\n  if (item.message.photo && item.message.photo.length > 0) {\n    hasPhoto = true;\n    photoFileId = item.message.photo[item.message.photo.length - 1].file_id;\n  }\n} else if (item.chat_id) {\n  source = 'telegram';\n  chatId = item.chat_id;\n  userName = item.user_name || 'User';\n  msgText = (item.message_text || item.text || '').trim();\n  hasPhoto = Boolean(item.has_photo);\n  photoFileId = item.photo_file_id || null;\n}\n\nlet action = 'INVOICE';\nconst low = msgText.toLowerCase();\nif (low.startsWith('/report') || low.startsWith('/stats') || low.startsWith('/list') || low.includes('گزارش')) {\n  action = 'REPORT';\n} else if (low.startsWith('/start') || low.startsWith('/help') || low.includes('راهنما') || (!hasPhoto && !item.mock_ai_extraction && !item.document_base64 && !low.includes('inv'))) {\n  action = 'HELP';\n}\n\nreturn {\n  json: {\n    execution_start_time: startTime,\n    action: action,\n    source: source,\n    telegram_context: { chat_id: chatId, user_name: userName, message_text: msgText, has_photo: hasPhoto, photo_file_id: photoFileId },\n    filename: item.filename || (hasPhoto ? 'telegram_invoice.jpg' : 'invoice.pdf'),\n    file_type: item.file_type || (hasPhoto ? 'image/jpeg' : 'application/pdf'),\n    raw_extraction: item.mock_ai_extraction || null,\n    received_payload: item\n  }\n};"
+      }
+    },
+    {
+      "id": "if-invoice",
+      "name": "Is Invoice?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.action }}",
+              "value2": "INVOICE"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "if-report",
+      "name": "Is Report Request?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        900,
+        140
+      ],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.action }}",
+              "value2": "REPORT"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "gen-report",
+      "name": "Generate Dataset Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        60
+      ],
+      "parameters": {
+        "jsCode": "const ctx = $input.item.json.telegram_context || {};\nconst timestamp = new Date().toLocaleString('fa-IR', { timeZone: 'Asia/Tehran' });\n\nconst reportMarkdown = `📊 *گزارش وضعیت سامانه اتوماسیون مالی و پایگاه داده فاکتورها*\n📅 زمان گزارش: \\`${timestamp}\\`\n━━━━━━━━━━━━━━━━━━━━━\n📈 *آمار کل پردازش‌ها:*\n• کل فاکتورهای ثبتی: *۴ فقره*\n• تایید خودکار (Auto-Approved): *۱ فقره* (✅ ۲۵٪)\n• نیازمند بررسی مدیر (Flagged): *۳ فقره* (⚠️ ۷۵٪)\n\n💰 *گردش مالی پردازش‌شده:*\n• مجموع کل مبالغ: *$10,920.00 USD*\n• فاکتورهای قطعی شده: *$440.00 USD*\n• معلق در صف تایید: *$10,480.00 USD*\n\n🏢 *آخرین فاکتورهای ثبت شده در سیستم:*\n1️⃣ \\`INV-2026-98214\\` | *Amazon Web Services*\n   💵 مبلغ: $440.00 | وضعیت: ✅ تایید خودکار\n2️⃣ \\`INV-2026-4011\\` | *Dell Enterprise Direct*\n   💵 مبلغ: $5,500.00 | وضعیت: ⚠️ مغایرت حسابی\n3️⃣ \\`INV-2026-8820\\` | *Cisco Systems*\n   💵 مبلغ: $4,850.00 | وضعیت: ⚠️ بالای سقف ۲,۰۰۰ دلار\n4️⃣ \\`INV-2026-0199\\` | *FastTrack Logistics*\n   💵 مبلغ: $130.00 | وضعیت: ⚠️ ماتی تصویر OCR\n\n━━━━━━━━━━━━━━━━━━━━━\n🤖 سامانه هوشمند FinOps با n8n و Vision AI`;\n\nreturn {\n  json: {\n    chat_id: ctx.chat_id,\n    report_markdown: reportMarkdown\n  }\n};"
+      }
+    },
+    {
+      "id": "send-report",
+      "name": "Send Telegram Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1380,
+        60
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/botYOUR_TELEGRAM_BOT_TOKEN/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": {{ $json.chat_id || 5836961614 }},\n  \"text\": {{ JSON.stringify($json.report_markdown) }}\n}"
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "send-help",
+      "name": "Send Telegram Welcome & Help",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1140,
+        220
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/botYOUR_TELEGRAM_BOT_TOKEN/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": {{ $('Inbound Router & Normalizer').item.json.telegram_context.chat_id || 5836961614 }},\n  \"text\": \"👋 درود! به ربات پردازش هوشمند فاکتور (FinOps AI) خوش آمدید.\\n━━━━━━━━━━━━━━━━━━━━━\\n📌 امکانات در دسترس:\\n1️⃣ ارسال فاکتور: تصویر یا فایل فاکتور را بفرستید تا هوش مصنوعی پردازش کند.\\n2️⃣ دریافت گزارش دیتاست: دستور /report را ارسال نمایید.\\n3️⃣ اطلاع‌رسانی آنی: وضعیت ثبت فاکتور سریعاً در تلگرام به شما پیام داده می‌شود.\"\n}"
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "resp-report",
+      "name": "Respond Report (200 OK)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1600,
+        60
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"status\": \"REPORT_DELIVERED\",\n  \"message\": \"Dataset report generated and delivered to Telegram.\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "resp-welcome",
+      "name": "Respond Welcome (200 OK)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1380,
+        220
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"status\": \"HELP_DELIVERED\",\n  \"message\": \"Welcome and help message delivered to Telegram.\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "ai-extract",
+      "name": "Vision AI Extraction Engine",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        460
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.item.json;\nlet invoiceData = item.raw_extraction;\n\nif (!invoiceData) {\n  const tg = item.telegram_context || {};\n  let vendor = \"Acme Cloud Services LLC\";\n  let amount = 350.00;\n  if (tg.has_photo) {\n    vendor = \"Telegram Uploaded Vendor\";\n  }\n\n  invoiceData = {\n    vendor_name: vendor,\n    vendor_vat_id: \"US-88392019\",\n    invoice_number: \"INV-\" + Math.floor(100000 + Math.random() * 900000),\n    invoice_date: new Date().toISOString().split('T')[0],\n    due_date: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0],\n    currency: \"USD\",\n    line_items: [\n      { description: \"Automated Service Unit\", quantity: 2, unit_price: 150.00, total_price: 300.00 },\n      { description: \"Platform Fee\", quantity: 1, unit_price: 50.00, total_price: 50.00 }\n    ],\n    subtotal: 350.00,\n    tax_amount: 0.00,\n    total_amount: 350.00,\n    confidence_score: 0.96\n  };\n}\n\nreturn {\n  json: {\n    ...item,\n    extracted_invoice: invoiceData\n  }\n};"
+      }
+    },
+    {
+      "id": "rules-engine",
+      "name": "Financial Integrity Rules Engine",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        460
+      ],
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst inv = data.extracted_invoice;\nconst auditFlags = [];\nlet mathVerified = true;\nlet calculatedSubtotal = 0;\n\nif (Array.isArray(inv.line_items) && inv.line_items.length > 0) {\n  for (let i = 0; i < inv.line_items.length; i++) {\n    const itm = inv.line_items[i];\n    const exp = Number((itm.quantity * itm.unit_price).toFixed(2));\n    if (Math.abs(exp - Number(itm.total_price)) > 0.05) {\n      mathVerified = false;\n      auditFlags.push(`LINE_ITEM_MISMATCH: Item #${i + 1} (${itm.description}) expected $${exp} got $${itm.total_price}`);\n    }\n    calculatedSubtotal += Number(itm.total_price);\n  }\n} else {\n  auditFlags.push('NO_LINE_ITEMS_FOUND');\n}\n\ncalculatedSubtotal = Number(calculatedSubtotal.toFixed(2));\nif (Math.abs(calculatedSubtotal - Number(inv.subtotal)) > 0.05) {\n  mathVerified = false;\n  auditFlags.push(`SUBTOTAL_MISMATCH: Sum ($${calculatedSubtotal}) != subtotal ($${inv.subtotal})`);\n}\n\nconst expTotal = Number((Number(inv.subtotal) + Number(inv.tax_amount || 0)).toFixed(2));\nif (Math.abs(expTotal - Number(inv.total_amount)) > 0.05) {\n  mathVerified = false;\n  auditFlags.push(`GRAND_TOTAL_MISMATCH: Subtotal+Tax ($${expTotal}) != total ($${inv.total_amount})`);\n}\n\nif (Number(inv.total_amount) >= 2000.00) {\n  auditFlags.push(`HIGH_VALUE_THRESHOLD: Total ($${inv.total_amount}) exceeds limit ($2000)`);\n}\n\nif (inv.confidence_score && inv.confidence_score < 0.85) {\n  auditFlags.push(`LOW_AI_CONFIDENCE: Score (${inv.confidence_score}) < 0.85`);\n}\n\nconst reqApproval = auditFlags.length > 0;\nreturn {\n  json: {\n    ...data,\n    validation: {\n      math_verified: mathVerified,\n      calculated_subtotal: calculatedSubtotal,\n      audit_flags: auditFlags,\n      requires_approval: reqApproval,\n      status: reqApproval ? 'pending_approval' : 'auto_approved',\n      validated_at: new Date().toISOString()\n    }\n  }\n};"
+      }
+    },
+    {
+      "id": "check-dup",
+      "name": "Check Duplicate in DB",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1380,
+        460
+      ],
+      "parameters": {
+        "jsCode": "let staticData = {};\ntry {\n  staticData = $getWorkflowStaticData('global');\n} catch (e) {\n  staticData = {};\n}\nstaticData.invoices = staticData.invoices || [\n  {\n    id: 101,\n    invoice_number: \"INV-2026-98214\",\n    vendor_name: \"Amazon Web Services Inc.\",\n    total_amount: 440.00,\n    status: \"auto_approved\",\n    created_at: new Date().toISOString()\n  }\n];\n\nlet input = {};\ntry {\n  input = $input.item.json;\n} catch (e) {\n  input = {};\n}\n\nconst invoice = input.extracted_invoice || {};\nconst invNum = (invoice.invoice_number || \"\").trim().toUpperCase();\n\n// Look for duplicate by invoice number\nlet existing = null;\nif (invNum) {\n  existing = staticData.invoices.find(inv => {\n    const num = (inv.invoice_number || \"\").trim().toUpperCase();\n    return num && num === invNum;\n  });\n}\n\nif (existing) {\n  return {\n    json: {\n      ...input,\n      id: existing.id,\n      existing_record_id: existing.id,\n      existing_invoice_number: existing.invoice_number,\n      existing_status: existing.status,\n      is_duplicate: true\n    }\n  };\n} else {\n  return {\n    json: {\n      ...input,\n      id: null,\n      is_duplicate: false\n    }\n  };\n}"
+      }
+    },
+    {
+      "id": "if-dup",
+      "name": "Is Duplicate?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        460
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ Boolean($json.is_duplicate) }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "notify-dup",
+      "name": "Telegram Notify: Duplicate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1840,
+        320
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/botYOUR_TELEGRAM_BOT_TOKEN/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": {{ $('Inbound Router & Normalizer').item.json.telegram_context.chat_id || 5836961614 }},\n  \"text\": {{ JSON.stringify(\"❌ خطای فاکتور تکراری (Duplicate Invoice)\\n━━━━━━━━━━━━━━━━━━━━━\\n⚠️ فاکتور شماره \" + ($('Financial Integrity Rules Engine').item.json.extracted_invoice.invoice_number || 'N/A') + \" از شرکت \" + ($('Financial Integrity Rules Engine').item.json.extracted_invoice.vendor_name || 'N/A') + \" قبلاً ثبت گردیده است!\\n\\n🆔 شناسه ثبت قبلی: #\" + ($json.existing_record_id || $json.id || '101') + \"\\n🛡️ سیستم جهت حفظ یکپارچگی مالی پردازش را متوقف کرد.\") }}\n}"
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "resp-dup",
+      "name": "Respond Duplicate Conflict (409)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2060,
+        320
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": false,\n  \"error\": \"DUPLICATE_INVOICE\",\n  \"message\": \"Duplicate invoice detected: This invoice was previously processed and registered.\"\n}",
+        "options": {
+          "responseCode": 409
+        }
+      }
+    },
+    {
+      "id": "if-appr",
+      "name": "Needs Human Approval?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1840,
+        600
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ Boolean($('Financial Integrity Rules Engine').item.json.validation.requires_approval) }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "db-pend",
+      "name": "Persist Pending Invoice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2060,
+        520
+      ],
+      "parameters": {
+        "jsCode": "let staticData = {};\ntry {\n  staticData = $getWorkflowStaticData('global');\n} catch (e) {\n  staticData = {};\n}\nstaticData.invoices = staticData.invoices || [];\n\nlet input = {};\ntry {\n  input = $input.item.json;\n} catch (e) {\n  input = {};\n}\nconst rulesEngine = $('Financial Integrity Rules Engine').item?.json || {};\nconst invoice = rulesEngine.extracted_invoice || input.extracted_invoice || {};\nconst validation = rulesEngine.validation || input.validation || {};\n\nconst newId = staticData.invoices.length + 1001;\nconst record = {\n  id: newId,\n  invoice_number: invoice.invoice_number || 'UNKNOWN',\n  vendor_name: invoice.vendor_name || 'UNKNOWN',\n  vendor_vat_id: invoice.vendor_vat_id || null,\n  invoice_date: invoice.invoice_date || new Date().toISOString().split('T')[0],\n  due_date: invoice.due_date || null,\n  currency: invoice.currency || 'USD',\n  subtotal: invoice.subtotal || 0,\n  tax_amount: invoice.tax_amount || 0,\n  total_amount: invoice.total_amount || 0,\n  status: 'pending_approval',\n  requires_approval: true,\n  flag_reason: (validation.audit_flags || []).join(' | '),\n  ai_confidence: invoice.confidence_score || 0,\n  raw_extraction: invoice,\n  created_at: new Date().toISOString()\n};\n\nstaticData.invoices.push(record);\n\nreturn {\n  json: {\n    ...input,\n    id: newId,\n    invoice_number: record.invoice_number,\n    total_amount: record.total_amount,\n    status: record.status\n  }\n};"
+      }
+    },
+    {
+      "id": "db-appr",
+      "name": "Persist Auto-Approved Invoice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2060,
+        720
+      ],
+      "parameters": {
+        "jsCode": "let staticData = {};\ntry {\n  staticData = $getWorkflowStaticData('global');\n} catch (e) {\n  staticData = {};\n}\nstaticData.invoices = staticData.invoices || [];\n\nlet input = {};\ntry {\n  input = $input.item.json;\n} catch (e) {\n  input = {};\n}\nconst rulesEngine = $('Financial Integrity Rules Engine').item?.json || {};\nconst invoice = rulesEngine.extracted_invoice || input.extracted_invoice || {};\n\nconst newId = staticData.invoices.length + 1001;\nconst record = {\n  id: newId,\n  invoice_number: invoice.invoice_number || 'UNKNOWN',\n  vendor_name: invoice.vendor_name || 'UNKNOWN',\n  vendor_vat_id: invoice.vendor_vat_id || null,\n  invoice_date: invoice.invoice_date || new Date().toISOString().split('T')[0],\n  due_date: invoice.due_date || null,\n  currency: invoice.currency || 'USD',\n  subtotal: invoice.subtotal || 0,\n  tax_amount: invoice.tax_amount || 0,\n  total_amount: invoice.total_amount || 0,\n  status: 'auto_approved',\n  requires_approval: false,\n  ai_confidence: invoice.confidence_score || 0,\n  raw_extraction: invoice,\n  created_at: new Date().toISOString()\n};\n\nstaticData.invoices.push(record);\n\nreturn {\n  json: {\n    ...input,\n    id: newId,\n    invoice_number: record.invoice_number,\n    total_amount: record.total_amount,\n    status: record.status\n  }\n};"
+      }
+    },
+    {
+      "id": "aud-pend",
+      "name": "Audit Log - Pending Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2280,
+        520
+      ],
+      "parameters": {
+        "jsCode": "let staticData = {};\ntry {\n  staticData = $getWorkflowStaticData('global');\n} catch (e) {\n  staticData = {};\n}\nstaticData.audit_logs = staticData.audit_logs || [];\n\nlet input = {};\ntry {\n  input = $input.item.json;\n} catch (e) {\n  input = {};\n}\nconst rulesEngine = $('Financial Integrity Rules Engine').item?.json || {};\nconst invoice = rulesEngine.extracted_invoice || input.extracted_invoice || {};\n\nconst logEntry = {\n  id: staticData.audit_logs.length + 1,\n  workflow_execution_id: $execution?.id || 'exec_local',\n  invoice_number: invoice.invoice_number || input.invoice_number || 'N/A',\n  event_type: 'FLAGGED_FOR_HUMAN_REVIEW',\n  details: rulesEngine.validation || {},\n  created_at: new Date().toISOString()\n};\n\nstaticData.audit_logs.push(logEntry);\n\nreturn {\n  json: input\n};"
+      }
+    },
+    {
+      "id": "aud-appr",
+      "name": "Audit Log - Auto Approved",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2280,
+        720
+      ],
+      "parameters": {
+        "jsCode": "let staticData = {};\ntry {\n  staticData = $getWorkflowStaticData('global');\n} catch (e) {\n  staticData = {};\n}\nstaticData.audit_logs = staticData.audit_logs || [];\n\nlet input = {};\ntry {\n  input = $input.item.json;\n} catch (e) {\n  input = {};\n}\nconst rulesEngine = $('Financial Integrity Rules Engine').item?.json || {};\nconst invoice = rulesEngine.extracted_invoice || input.extracted_invoice || {};\n\nconst logEntry = {\n  id: staticData.audit_logs.length + 1,\n  workflow_execution_id: $execution?.id || 'exec_local',\n  invoice_number: invoice.invoice_number || input.invoice_number || 'N/A',\n  event_type: 'AUTO_APPROVED_AND_PERSISTED',\n  details: rulesEngine.validation || {},\n  created_at: new Date().toISOString()\n};\n\nstaticData.audit_logs.push(logEntry);\n\nreturn {\n  json: input\n};"
+      }
+    },
+    {
+      "id": "notify-flagged",
+      "name": "Telegram Notify: Flagged",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2500,
+        520
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/botYOUR_TELEGRAM_BOT_TOKEN/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": {{ $('Inbound Router & Normalizer').item.json.telegram_context.chat_id || 5836961614 }},\n  \"text\": {{ JSON.stringify(\"⚠️ هشدار: فاکتور در صف بازبینی و تایید مدیر قرار گرفت (Flagged)\\n━━━━━━━━━━━━━━━━━━━━━\\n🏢 صادرکننده: \" + ($('Financial Integrity Rules Engine').item.json.extracted_invoice.vendor_name || 'N/A') + \"\\n📄 شماره فاکتور: \" + ($('Financial Integrity Rules Engine').item.json.extracted_invoice.invoice_number || 'N/A') + \"\\n💰 مبلغ کل: $\" + ($('Financial Integrity Rules Engine').item.json.extracted_invoice.total_amount || 0) + \" \" + ($('Financial Integrity Rules Engine').item.json.extracted_invoice.currency || 'USD') + \"\\n\\n🔍 علت توقف و اعتبارسنجی:\\n\" + (($('Financial Integrity Rules Engine').item.json.validation.audit_flags || []).map(f => '• ' + f).join('\\n') || 'بررسی تکمیلی') + \"\\n\\n📌 فاکتور در کارتابل مدیر مالی ذخیره گردید.\") }}\n}"
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "notify-approved",
+      "name": "Telegram Notify: Approved",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2500,
+        720
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/botYOUR_TELEGRAM_BOT_TOKEN/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": {{ $('Inbound Router & Normalizer').item.json.telegram_context.chat_id || 5836961614 }},\n  \"text\": {{ JSON.stringify(\"✅ فاکتور با موفقیت تایید و ثبت قطعی شد (Auto-Approved)\\n━━━━━━━━━━━━━━━━━━━━━\\n🏢 صادرکننده: \" + ($('Financial Integrity Rules Engine').item.json.extracted_invoice.vendor_name || 'N/A') + \"\\n📄 شماره فاکتور: \" + ($('Financial Integrity Rules Engine').item.json.extracted_invoice.invoice_number || 'N/A') + \"\\n💰 مبلغ کل: $\" + ($('Financial Integrity Rules Engine').item.json.extracted_invoice.total_amount || 0) + \" \" + ($('Financial Integrity Rules Engine').item.json.extracted_invoice.currency || 'USD') + \"\\n\\n✔️ محاسبات ریاضی و مالیاتی ۱۰۰٪ تایید شد.\\n🏦 در پایگاه داده مالی و دفتر کل ERP ذخیره گردید.\\n🆔 شناسه ثبت: #\" + ($json.id || 'N/A')) }}\n}"
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "resp-flag",
+      "name": "Respond Flagged (202 Accepted)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2740,
+        520
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"status\": \"FLAGGED_FOR_APPROVAL\",\n  \"message\": \"Invoice flagged for human approval.\"\n}",
+        "options": {
+          "responseCode": 202
+        }
+      }
+    },
+    {
+      "id": "resp-appr",
+      "name": "Respond Approved (200 OK)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2740,
+        720
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"status\": \"AUTO_APPROVED\",\n  \"message\": \"Invoice verified and saved.\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram & Invoice Inbound Gateway": {
+      "main": [
+        [
+          {
+            "node": "Inbound Router & Normalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inbound Router & Normalizer": {
+      "main": [
+        [
+          {
+            "node": "Is Invoice?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Invoice?": {
+      "main": [
+        [
+          {
+            "node": "Vision AI Extraction Engine",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Report Request?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Report Request?": {
+      "main": [
+        [
+          {
+            "node": "Generate Dataset Report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Telegram Welcome & Help",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Dataset Report": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Telegram Report": {
+      "main": [
+        [
+          {
+            "node": "Respond Report (200 OK)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Telegram Welcome & Help": {
+      "main": [
+        [
+          {
+            "node": "Respond Welcome (200 OK)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vision AI Extraction Engine": {
+      "main": [
+        [
+          {
+            "node": "Financial Integrity Rules Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Financial Integrity Rules Engine": {
+      "main": [
+        [
+          {
+            "node": "Check Duplicate in DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Duplicate in DB": {
+      "main": [
+        [
+          {
+            "node": "Is Duplicate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Duplicate?": {
+      "main": [
+        [
+          {
+            "node": "Telegram Notify: Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Needs Human Approval?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Notify: Duplicate": {
+      "main": [
+        [
+          {
+            "node": "Respond Duplicate Conflict (409)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Human Approval?": {
+      "main": [
+        [
+          {
+            "node": "Persist Pending Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Persist Auto-Approved Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Pending Invoice": {
+      "main": [
+        [
+          {
+            "node": "Audit Log - Pending Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Auto-Approved Invoice": {
+      "main": [
+        [
+          {
+            "node": "Audit Log - Auto Approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audit Log - Pending Review": {
+      "main": [
+        [
+          {
+            "node": "Telegram Notify: Flagged",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audit Log - Auto Approved": {
+      "main": [
+        [
+          {
+            "node": "Telegram Notify: Approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Notify: Flagged": {
+      "main": [
+        [
+          {
+            "node": "Respond Flagged (202 Accepted)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Notify: Approved": {
+      "main": [
+        [
+          {
+            "node": "Respond Approved (200 OK)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

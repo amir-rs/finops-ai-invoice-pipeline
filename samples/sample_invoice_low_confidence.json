@@ -1,0 +1,25 @@
+{
+  "source": "scanned_receipt",
+  "filename": "Courier_Delivery_Receipt_INV-0199.jpg",
+  "file_type": "image/jpeg",
+  "mock_ai_extraction": {
+    "vendor_name": "FastTrack Logistics Express",
+    "vendor_vat_id": "US-30192844",
+    "invoice_number": "INV-2026-0199",
+    "invoice_date": "2026-10-30",
+    "due_date": "2026-11-05",
+    "currency": "USD",
+    "line_items": [
+      {
+        "description": "Overnight Freight Shipment (Blurry Scan)",
+        "quantity": 1,
+        "unit_price": 120.00,
+        "total_price": 120.00
+      }
+    ],
+    "subtotal": 120.00,
+    "tax_amount": 10.00,
+    "total_amount": 130.00,
+    "confidence_score": 0.65
+  }
+}
