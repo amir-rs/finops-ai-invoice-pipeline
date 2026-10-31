@@ -236,15 +236,6 @@ python scripts/test_pipeline.py --live
 
 ---
 
-## 💼 How to Present on Your Resume (متن استاندارد رزومه)
-
-### English (STAR Format for CV / LinkedIn):
-> **Lead Automation Engineer / Workflow Architect**
-> - Architected an end-to-end autonomous FinOps pipeline in **n8n**, **PostgreSQL**, and **Vision AI (GPT-4o)** that eliminated 85% of manual invoice data entry while enforcing 100% mathematical reconciliation.
-> - Implemented custom **JavaScript financial validation engines** checking line-item unit math, subtotal reconciliation, and composite idempotency to eradicate duplicate payments.
-> - Integrated **Human-in-the-Loop (HITL)** governance and interactive Slack approval mechanisms for high-value transactions (> $2,000) and mathematical anomalies.
-> - Built resilient error-handling sub-workflows with an automated **Dead Letter Queue (DLQ)**, cutting pipeline downtime and mean time to resolution (MTTR) by 60%.
-
 > **مهندس اتوماسیون فرآیند و هوش مصنوعی (n8n & AI Engineer)**
 > - طراحی و پیاده‌سازی پایپ‌لاین خودکار پردازش اسناد و فاکتورهای مالی با n8n، هوش مصنوعی چندوجهی (Vision LLM) و پایگاه داده PostgreSQL.
 > - کاهش ۸۵ درصدی زمان ثبت دستی اسناد مالی و حذف کامل خطای انسانی در ورود داده‌ها از طریق استخراج ساختاریافته (JSON Schema).
