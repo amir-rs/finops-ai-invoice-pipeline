@@ -190,29 +190,6 @@ start-telegram-bot.bat
 
 ---
 
-## 📤 نحوه قرار دادن پروژه در گیت‌هاب (GitHub)
-
-برای بارگذاری این پروژه در گیت‌هاب خود، مراحل زیر را در ترمینال اجرا نمایید:
-
-```bash
-# ۱. راه‌اندازی مخزن محلی گیت
-git init
-
-# ۲. افزودن فایل‌ها به گیت
-git add .
-
-# ۳. ثبت اولین کامیت
-git commit -m "feat: initial commit of autonomous FinOps AI vision pipeline"
-
-# ۴. تغییر نام برنچ به main
-git branch -M main
-
-# ۵. اتصال به مخزن گیت‌هاب شما (آدرس گیت‌هاب خود را جایگزین کنید)
-git remote add origin https://github.com/USERNAME/finops-ai-invoice-pipeline.git
-
-# ۶. ارسال فایل‌ها به گیت‌هاب
-git push -u origin main
-```
 
 ---
 
