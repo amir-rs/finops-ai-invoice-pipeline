@@ -245,7 +245,6 @@ python scripts/test_pipeline.py --live
 > - Integrated **Human-in-the-Loop (HITL)** governance and interactive Slack approval mechanisms for high-value transactions (> $2,000) and mathematical anomalies.
 > - Built resilient error-handling sub-workflows with an automated **Dead Letter Queue (DLQ)**, cutting pipeline downtime and mean time to resolution (MTTR) by 60%.
 
-### فارسی (برای رزومه‌های داخلی و شرکت‌های دانش‌بنیان):
 > **مهندس اتوماسیون فرآیند و هوش مصنوعی (n8n & AI Engineer)**
 > - طراحی و پیاده‌سازی پایپ‌لاین خودکار پردازش اسناد و فاکتورهای مالی با n8n، هوش مصنوعی چندوجهی (Vision LLM) و پایگاه داده PostgreSQL.
 > - کاهش ۸۵ درصدی زمان ثبت دستی اسناد مالی و حذف کامل خطای انسانی در ورود داده‌ها از طریق استخراج ساختاریافته (JSON Schema).
@@ -255,10 +254,3 @@ python scripts/test_pipeline.py --live
 
 ---
 
-## 🎯 Interview Deep Dive (نکات کلیدی برای مصاحبه کاری)
-
-وقتی در مصاحبه شغلی از شما درباره این پروژه پرسیدند، روی این ۴ محور کلیدی تأکید کنید:
-1. **تمرکز بر ارزش کسب‌وکار (ROI):** نگویید «یک ورک‌فلو در n8n ساختم»؛ بگویید «یک سیستم کاهش ریسک مالی و خطای حسابداری طراحی کردم که جلوی پرداخت‌های تکراری و مغایرت‌های مالیاتی را می‌گیرد».
-2. **قابلیت اطمینان مهندسی (Reliability & Idempotency):** توضیح دهید که چطور قبل از ثبت هر فاکتور، با کوئری کامپوزیت روی `(vendor_name, invoice_number)` مانع از ثبت مجدد فاکتور در شرایط Race Condition شدید.
-3. **حکمرانی هوش مصنوعی (AI Governance):** هوش مصنوعی نباید بدون نظارت مستقیماً پول جابه‌جا کند؛ توضیح دهید که چگونه ترکیب هوش مصنوعی دیداری با موتور قوانین ریاضی و سازوکار Human-in-the-Loop یک راهکار امن برای شرکت‌ها می‌سازد.
-4. **تست‌پذیری و کانتینری بودن (Containerization & Testing):** اشاره کنید که کل پروژه همراه با داکر کامپوز و اسکریپت تست خودکار آماده شده است.
